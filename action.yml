@@ -1,0 +1,52 @@
+name: "scalified/commit-info-action"
+description: "Generates commit information in JSON format"
+author: "Scalified"
+branding:
+  icon: "git-commit"
+  color: "gray-dark"
+
+inputs:
+  file:
+    description: "Path to the file where commit info will be saved"
+    required: false
+  hash:
+    description: "Git commit hash to generate information for"
+    required: false
+
+outputs:
+  commit-info:
+    description: "Git commit information"
+    value: ${{ steps.commit-info.outputs.commit-info }}
+  short-hash:
+    description: "Short version of the Git commit hash"
+    value: ${{ steps.commit-info.outputs.short-hash }}
+
+runs:
+  using: "composite"
+  steps:
+    - id: commit-info
+      env:
+        INPUT_FILE: ${{ inputs.file }}
+        INPUT_HASH: ${{ inputs.hash }}
+      run: |
+        # Commit Info Action
+        cmd="curl -sSL https://gist.githubusercontent.com/vbaidak/2c700413c4862e7a92f366040f2ff3ea/raw/git-commit-info-json.sh | sh"
+
+        if [ -n "$INPUT_HASH" ]; then
+          cmd="$cmd -s -- $INPUT_HASH"
+          echo "🛠️ Set commit hash: $INPUT_HASH"
+        fi
+
+        commit_info=$(eval "$cmd")
+
+        if [ -n "$INPUT_FILE" ]; then
+          echo "$commit_info" > "$INPUT_FILE"
+          echo "💾 Saved commit info to: $INPUT_FILE"
+        fi
+
+        echo "commit-info<<EOF" >> "$GITHUB_OUTPUT"
+        echo "$commit_info" >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+
+        echo "short-hash=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+      shell: bash
